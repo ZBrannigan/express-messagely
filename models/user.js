@@ -3,6 +3,7 @@
 const { BCRYPT_WORK_FACTOR } = require("../config")
 const db = require("../db");
 const bcrypt = require("bcrypt");
+const ExpressError = require("../expressError");
 
 /** User of the site. */
 
@@ -14,18 +15,25 @@ class User {
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
-    // try{
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
-    const results = await db.query(`
-      INSERT INTO users (username, password, first_name, last_name, phone, join_at)
-        VALUES ($1, $2, $3, $4, $5, LOCALTIMESTAMP)
-        RETURNING username, password, first_name, last_name, phone;`,
-      [username, hashedPassword, first_name, last_name, phone]);
-    // TODO: make sure database throws errors (already exists, or weird input?)
-    return results.rows[0];
-    // } catch(err) {
-    //   return new ExpressError("I dunno? check user.js", 500);
-    // }
+    try{
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
+      const results = await db.query(`
+        INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at)
+          VALUES ($1, $2, $3, $4, $5, LOCALTIMESTAMP, CURRENT_TIMESTAMP)
+          RETURNING username, password, first_name, last_name, phone;`,
+        [username, hashedPassword, first_name, last_name, phone]);
+      // TODO: make sure database throws errors (already exists, or weird input?)
+      return results.rows[0];
+    } catch(err) {
+      if (err.routine === "_bt_check_unique") {
+        throw new ExpressError("Username already taken", 403);
+      }
+      if (err.routine === "ExecConstraints") {
+        throw new ExpressError("Please include all required fields: {username, password, first_name, last_name, phone}", 400);
+      }
+      console.error(err.stack);
+      throw new ExpressError("Internal Server Error. Please try again.", 500);
+    }
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
@@ -45,7 +53,7 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    results = await db.query(`
+    const results = await db.query(`
       UPDATE users SET last_login_at = CURRENT_TIMESTAMP
         WHERE username = $1
         RETURNING last_login_at;`,
@@ -57,11 +65,11 @@ class User {
   }
 
   /** All: basic info on all users:
-   * [{username, first_name, last_name, phone}, ...] */
+   * [{username, first_name, last_name}, ...] */
 
   static async all() {
     const results = await db.query(`
-      SELECT username, first_name, last_name, phone FROM users;`);
+      SELECT username, first_name, last_name FROM users;`);
     return results.rows;
   }
 
