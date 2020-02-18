@@ -22,12 +22,13 @@ class User {
           VALUES ($1, $2, $3, $4, $5, LOCALTIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING username, password, first_name, last_name, phone;`,
         [username, hashedPassword, first_name, last_name, phone]);
-      // TODO: make sure database throws errors (already exists, or weird input?)
       return results.rows[0];
     } catch(err) {
+      // SQL's unique key constraint
       if (err.routine === "_bt_check_unique") {
         throw new ExpressError("Username already taken", 403);
       }
+      // SQL's "required not null" constraint
       if (err.routine === "ExecConstraints") {
         throw new ExpressError("Please include all required fields: {username, password, first_name, last_name, phone}", 400);
       }
