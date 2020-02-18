@@ -4,14 +4,25 @@ const { BCRYPT_WORK_FACTOR } = require("../config")
 const db = require("../db");
 const bcrypt = require("bcrypt");
 const ExpressError = require("../expressError");
+const Message = require("./message");
 
 /** User of the site. */
 
 class User {
 
+  constructor({username, password, first_name, last_name, phone, join_at, last_login_at}) {
+    this.username = username;
+    this.password = password;
+    this.first_name = first_name;
+    this.last_name = last_name;
+    this.phone = phone;
+    this.join_at = join_at;
+    this.last_login_at = last_login_at;
+  }
+
   /** register new user -- returns
    *    {username, password, first_name, last_name, phone}
-   * 
+   *    **Update: returns --> username
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
@@ -20,9 +31,9 @@ class User {
       const results = await db.query(`
         INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at)
           VALUES ($1, $2, $3, $4, $5, LOCALTIMESTAMP, CURRENT_TIMESTAMP)
-          RETURNING username, password, first_name, last_name, phone;`,
+          RETURNING username;`,
         [username, hashedPassword, first_name, last_name, phone]);
-      return results.rows[0];
+      return results.rows[0].username;
     } catch(err) {
       // SQL's unique key constraint
       if (err.routine === "_bt_check_unique") {
@@ -110,14 +121,11 @@ class User {
         WHERE messages.from_username = $1;`,
       [username]);
 
-    return results.rows.map(function (message) {
-      // pattern found at https://stackoverflow.com/questions/29620686/is-it-possible-to-destructure-onto-an-existing-object-javascript-es6
-      const { username, first_name, last_name, phone } = message;
-      const to_user = { username, first_name, last_name, phone };
+    return results.rows.map(function (data) {
+      const to_user = new User(data); 
+      const msgInstance = new Message(data);
 
-      const { id, body, sent_at, read_at } = message;
-
-      return { id, body, sent_at, read_at, to_user };
+      return {  ...msgInstance, to_user };
     });
   }
 
@@ -137,13 +145,13 @@ class User {
         WHERE messages.to_username = $1;`,
       [username]);
 
-    return results.rows.map(function (message) {
-      const { username, first_name, last_name, phone } = message;
-      const from_user = { username, first_name, last_name, phone };
+    return results.rows.map(function (data) {
+      // const { username, first_name, last_name, phone } = message;
+      // const from_user = { username, first_name, last_name, phone };
+      const from_user = new User(data); 
+      const msgInstance = new Message(data);
 
-      const { id, body, sent_at, read_at } = message;
-
-      return { id, body, sent_at, read_at, from_user };
+      return { ...msgInstance, from_user };
     });
   }
 }

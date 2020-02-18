@@ -8,6 +8,15 @@ const ExpressError = require("../expressError");
 
 class Message {
 
+  constructor({id, from_username, to_username, body, sent_at, read_at}) {
+    this.id = id,
+    this.from_username = from_username;
+    this.to_username = to_username;
+    this.body = body;
+    this.sent_at = sent_at;
+    this.read_at = read_at;
+  }
+
   /** register new message -- returns
    *    {id, from_username, to_username, body, sent_at}
    */

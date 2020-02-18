@@ -33,7 +33,7 @@ router.post("/login", async function(req, res, next) {
  */
 router.post("/register", async function(req, res, next) {
   try {
-    const { username } = await User.register(req.body);
+    const username = await User.register(req.body);
     let _token = jwt.sign({ username }, SECRET_KEY);
     return res.json({ _token });
   } catch (err) {
