@@ -16,3 +16,9 @@ CREATE TABLE messages (
     sent_at timestamp with time zone NOT NULL,
     read_at timestamp with time zone
 );
+
+CREATE TABLE resets (
+    username text PRIMARY KEY UNIQUE REFERENCES users,
+    code char(6),
+    created_at timestamp without time zone
+);

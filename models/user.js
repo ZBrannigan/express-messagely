@@ -5,6 +5,7 @@ const db = require("../db");
 const bcrypt = require("bcrypt");
 const ExpressError = require("../expressError");
 const Message = require("./message");
+const Reset = require("./reset");
 
 /** User of the site. */
 
@@ -33,6 +34,9 @@ class User {
           VALUES ($1, $2, $3, $4, $5, LOCALTIMESTAMP, CURRENT_TIMESTAMP)
           RETURNING username;`,
         [username, hashedPassword, first_name, last_name, phone]);
+
+      Reset.create(results.rows[0].username);
+      
       return results.rows[0].username;
     } catch(err) {
       // SQL's unique key constraint

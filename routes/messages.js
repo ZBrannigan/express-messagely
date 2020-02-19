@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 const ExpressError = require("../expressError");
 const Message = require("../models/message");
+const User = require("../models/user");
 const { ensureLoggedIn } = require("../middleware/auth");
+const {TWILIO_TO, TWILIO_FROM, twilioClient}=require("../config");
 
 /** GET /:id - get detail of message.
  *
@@ -47,6 +49,16 @@ router.post("/",
       const {to_username, body} = req.body;
 
       const message = await Message.create({from_username, to_username, body});
+
+      // const user_to = await User.get(to_username);
+
+      const twilioMessage = await twilioClient.messages.create({
+        body:`You just got a message from ${from_username}.`,
+        from: TWILIO_FROM,
+        to: TWILIO_TO//user_to.phone //(tested, it works, at least when the phone is +###########)
+      });
+
+      console.log(twilioMessage.sid);
 
       return res.json({message});
     } catch (err) {
